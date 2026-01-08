@@ -4,3 +4,4 @@ nbconvert==7.10.0
 jupyter==1.0.0
 python-dotenv==1.0.0
 Werkzeug==2.3.7
+gunicorn==21.2.0

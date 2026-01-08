@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: notebook-to-pdf-converter
+    env: python
+    buildCommand: "pip install -r requirements.txt && sudo apt-get update && sudo apt-get install -y pandoc texlive-xetex texlive-fonts-recommended texlive-plain-generic"
+    startCommand: "python app.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0

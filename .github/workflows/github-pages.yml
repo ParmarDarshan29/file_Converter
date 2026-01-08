@@ -1,0 +1,42 @@
+name: Deploy Static Demo to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Create docs folder
+        run: |
+          mkdir -p docs
+          cp templates/index.html docs/index.html
+          cp image.png docs/image.png
+          
+          # Update paths for GitHub Pages
+          sed -i 's|src="/image.png"|src="image.png"|g' docs/index.html
+          
+          # Add warning banner about backend
+          sed -i 's|<body>|<body><div style="position:fixed;top:0;left:0;right:0;background:#e57373;color:white;padding:12px;text-align:center;font-weight:600;z-index:9999;">⚠️ DEMO ONLY - PDF conversion requires backend server (not available on GitHub Pages)</div>|' docs/index.html
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: './docs'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

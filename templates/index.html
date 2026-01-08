@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Convert Jupyter Notebooks to PDF instantly with our futuristic converter tool">
+    <title>Notebook to PDF Converter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background: #3d4f61;
+            border: 1px solid #4a5f7a;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: clamp(25px, 5vw, 40px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header { text-align: center; margin-bottom: 40px; }
+
+        .profile-link {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #4a5f7a;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 25px rgba(77, 208, 225, 0.3);
+            transition: all 0.3s ease;
+            z-index: 10;
+            display: block;
+            margin: 0 auto 35px;
+        }
+
+        .profile-link:hover {
+            border-color: #4dd0e1;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25), 0 0 35px rgba(77, 208, 225, 0.4);
+            transform: scale(1.05) translateY(-3px);
+        }
+
+        .profile-link img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #b0bec5;
+            font-size: 0.9em;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: #4dd0e1;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #80deea;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: clamp(1.75em, 5vw, 2.5em);
+            margin-bottom: 10px;
+            font-weight: 600;
+            line-height: 1.2;
+            position: relative;
+            display: inline-block;
+        }
+
+        .header h1::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: #4dd0e1;
+            border-radius: 2px;
+        }
+
+        .header p { 
+            color: #b0bec5; 
+            font-size: clamp(0.95em, 2.5vw, 1.1em);
+            line-height: 1.4;
+        }
+
+        .upload-area {
+            border: 2px dashed #4a5f7a;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(44, 62, 80, 0.3);
+        }
+
+        .upload-area:hover { 
+            border-color: #4dd0e1; 
+            background: rgba(44, 62, 80, 0.5);
+            transform: translateY(-2px);
+        }
+        .upload-area.dragover { 
+            border-color: #4dd0e1;
+            background: rgba(77, 208, 225, 0.1);
+        }
+
+        .upload-icon { 
+            font-size: 3.5em; 
+            margin-bottom: 15px; 
+            color: #4dd0e1;
+            position: relative;
+            z-index: 1;
+        }
+        .upload-text { color: #ffffff; font-size: 1.2em; margin-bottom: 10px; font-weight: 600; }
+        .upload-subtext { color: #b0bec5; font-size: 0.95em; }
+        #file-input { display: none; }
+
+        .file-info {
+            background: rgba(44, 62, 80, 0.4);
+            border: 1px solid #4a5f7a;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .file-info.show { display: flex; }
+        .file-details { flex: 1; }
+        .file-name { color: #ffffff; font-weight: 600; word-break: break-all; }
+        .file-size { color: #b0bec5; font-size: 0.9em; margin-top: 5px; }
+        .remove-file {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #4a5f7a;
+            color: #ffffff;
+            cursor: pointer;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            line-height: 1;
+        }
+        .remove-file:hover { 
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #e57373;
+            color: #e57373;
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: #26a69a;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .convert-btn:hover:not(:disabled) { 
+            background: #2bbbad;
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .convert-btn span { position: relative; z-index: 1; }
+
+        .progress-container { display: none; margin-top: 20px; }
+        .progress-container.show { display: block; }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(44, 62, 80, 0.5);
+            border: 1px solid #4a5f7a;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4dd0e1;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text { color: #b0bec5; font-size: 0.9em; text-align: center; }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            animation: slideIn 0.3s ease;
+            border: 1px solid;
+        }
+        .message.show { display: block; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .message.success { 
+            background: rgba(38, 166, 154, 0.1); 
+            border-color: #26a69a; 
+            color: #4dd0e1;
+        }
+        .message.error { 
+            background: rgba(229, 115, 115, 0.1); 
+            border-color: #e57373; 
+            color: #ef9a9a;
+        }
+
+        /* Tablet and below */
+        @media (max-width: 1024px) {
+            .profile-link {
+                width: 100px;
+                height: 100px;
+                margin-bottom: 30px;
+            }
+            .container { 
+                max-width: 90%; 
+                padding: 35px;
+            }
+            .header h1 { font-size: 2.2em; }
+            body::before { 
+                width: 600px; 
+                height: 600px; 
+                top: -30%;
+                right: -30%;
+            }
+            body::after { 
+                width: 500px; 
+                height: 500px; 
+                bottom: -20%;
+                left: -20%;
+            }
+        }
+
+        /* Small tablets and large phones */
+        @media (max-width: 768px) {
+            body { padding: 15px; }
+            .container { 
+                padding: 30px 25px;
+                max-width: 95%;
+            }
+            .header { margin-bottom: 30px; }
+            .header h1 { font-size: 2em; }
+            .header p { font-size: 1em; }
+            .upload-area { padding: 35px 20px; }
+            .upload-icon { font-size: 3em; }
+            .upload-text { font-size: 1.1em; }
+            .convert-btn { padding: 14px; font-size: 1em; }
+            body::before { 
+                width: 400px; 
+                height: 400px; 
+            }
+            body::after { 
+                width: 350px; 
+                height: 350px; 
+            }
+        }
+
+        /* Mobile phones */
+        @media (max-width: 480px) {
+            .profile-link {
+                width: 80px;
+                height: 80px;
+                margin-bottom: 25px;
+            }
+            body { padding: 10px; }
+            .container { 
+                padding: 25px 20px;
+                max-width: 100%;
+                border-radius: 15px;
+            }
+            .header { margin-bottom: 25px; }
+            .header h1 { 
+                font-size: 1.75em;
+                margin-bottom: 8px;
+            }
+            .header p { font-size: 0.95em; }
+            .upload-area { 
+                padding: 30px 15px;
+                border-width: 2px;
+            }
+            .upload-area::before {
+                width: 150px;
+                height: 150px;
+            }
+            .upload-icon { font-size: 2.5em; }
+            .upload-text { font-size: 1em; }
+            .upload-subtext { font-size: 0.85em; }
+            .file-info { 
+                padding: 12px;
+                flex-wrap: wrap;
+            }
+            .file-name { font-size: 0.9em; }
+            .file-size { font-size: 0.85em; }
+            .remove-file { font-size: 1.1em; padding: 5px 8px; }
+            .convert-btn { 
+                padding: 13px; 
+                font-size: 0.95em;
+                border-radius: 8px;
+            }
+            .progress-bar { height: 8px; }
+            .progress-text { font-size: 0.85em; }
+            .message { 
+                padding: 12px; 
+                font-size: 0.9em;
+            }
+            body::before, body::after { display: none; }
+        }
+
+        /* Very small phones */
+        @media (max-width: 360px) {
+            .container { padding: 20px 15px; }
+            .header h1 { font-size: 1.5em; }
+            .upload-area { padding: 25px 10px; }
+            .upload-icon { font-size: 2.2em; }
+        }
+
+        /* Large screens */
+        @media (min-width: 1440px) {
+            .container { max-width: 650px; }
+        }
+
+        /* Extra large screens */
+        @media (min-width: 1920px) {
+            .container { max-width: 700px; }
+            body::before { 
+                width: 1000px; 
+                height: 1000px; 
+            }
+            body::after { 
+                width: 800px; 
+                height: 800px; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        <a href="https://github.com/ParmarDarshan29" target="_blank" rel="noopener noreferrer" class="profile-link" aria-label="GitHub Profile">
+            <img src="/image.png" alt="Profile">
+        </a>
+        <div class="container">
+        <div class="header">
+            <h1>Notebook to PDF Converter</h1>
+            <p>Convert Jupyter Notebooks instantly</p>
+        </div>
+
+        <form id="converter-form">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Click or drag to upload</div>
+                <div class="upload-subtext">.ipynb files (max 50MB)</div>
+                <input type="file" id="file-input" accept=".ipynb" />
+            </div>
+
+            <div class="file-info" id="file-info">
+                <div class="file-details">
+                    <div class="file-name" id="file-name"></div>
+                    <div class="file-size" id="file-size"></div>
+                </div>
+                <button type="button" class="remove-file" id="remove-file" aria-label="Remove file">×</button>
+            </div>
+
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text">Converting...</div>
+            </div>
+
+            <button type="submit" class="convert-btn" id="convert-btn" disabled><span>Convert to PDF</span></button>
+
+            <div class="message" id="message"></div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('converter-form');
+        const fileInput = document.getElementById('file-input');
+        const uploadArea = document.getElementById('upload-area');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        const removeFile = document.getElementById('remove-file');
+        const convertBtn = document.getElementById('convert-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const message = document.getElementById('message');
+        let selectedFile = null;
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            const file = files[0];
+
+            if (!file.name.toLowerCase().endsWith('.ipynb')) {
+                showMessage('Only .ipynb files are allowed', 'error');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showMessage('File is too large. Maximum size is 50MB', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            displayFileInfo();
+        }
+
+        function displayFileInfo() {
+            fileName.textContent = selectedFile.name;
+            fileSize.textContent = `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`;
+            fileInfo.classList.add('show');
+            convertBtn.disabled = false;
+        }
+
+        removeFile.addEventListener('click', (e) => {
+            e.preventDefault();
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            convertBtn.disabled = true;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!selectedFile) {
+                showMessage('Please select a file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                convertBtn.disabled = true;
+                progressContainer.classList.add('show');
+                progressFill.style.width = '30%';
+                message.classList.remove('show');
+
+                const response = await fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressFill.style.width = '70%';
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Conversion failed');
+                }
+
+                const blob = await response.blob();
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Complete!';
+
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = selectedFile.name.replace(/\.ipynb$/i, '.pdf');
+                document.body.appendChild(link);
+                link.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(link);
+
+                setTimeout(() => {
+                    resetForm();
+                    showMessage('PDF created successfully!', 'success');
+                }, 1000);
+
+            } catch (error) {
+                progressContainer.classList.remove('show');
+                convertBtn.disabled = false;
+                showMessage(error.message, 'error');
+            }
+        });
+
+        function resetForm() {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            convertBtn.disabled = true;
+            progressContainer.classList.remove('show');
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Converting...';
+        }
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type} show`;
+            setTimeout(() => { message.classList.remove('show'); }, 5000);
+        }
+    </script>
+    </div>
+
+    <footer>
+        <p>Made by <a href="https://github.com/ParmarDarshan29" target="_blank" rel="noopener noreferrer">Darshan Parmar</a></p>
+    </footer>
+</body>
+</html>

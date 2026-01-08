@@ -1,0 +1,21 @@
+name: Notify Render on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          echo "✅ Code pushed to GitHub"
+          echo "📦 Render will auto-deploy from this repository"
+          echo "🔗 Set up auto-deploy at: https://render.com"
+          echo ""
+          echo "Steps:"
+          echo "1. Go to render.com and sign in with GitHub"
+          echo "2. Create Web Service from this repository"
+          echo "3. Render will automatically deploy on every push"

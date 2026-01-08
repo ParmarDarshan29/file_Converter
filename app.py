@@ -39,6 +39,18 @@ def serve_image():
     return send_file('image.png', mimetype='image/png')
 
 
+@app.route('/robots.txt', methods=['GET'])
+def serve_robots():
+    """Serve the robots.txt file."""
+    return send_file('robots.txt', mimetype='text/plain')
+
+
+@app.route('/sitemap.xml', methods=['GET'])
+def serve_sitemap():
+    """Serve the sitemap.xml file."""
+    return send_file('sitemap.xml', mimetype='application/xml')
+
+
 @app.route('/api/convert', methods=['POST'])
 def convert_ipynb_to_pdf():
     """Convert uploaded IPYNB file to PDF."""

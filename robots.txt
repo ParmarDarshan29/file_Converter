@@ -1,0 +1,8 @@
+# robots.txt for Notebook to PDF Converter
+# Allow all robots to access the site
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://notebook-to-pdf-converter.onrender.com/sitemap.xml

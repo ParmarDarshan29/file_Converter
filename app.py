@@ -1,8 +1,9 @@
 import os
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
-from nbconvert import PDFExporter
+from nbconvert import HTMLExporter
 from nbconvert.preprocessors import Preprocessor
+from weasyprint import HTML
 import io
 import tempfile
 from werkzeug.utils import secure_filename
@@ -53,38 +54,34 @@ def serve_sitemap():
 
 @app.route('/api/convert', methods=['POST'])
 def convert_ipynb_to_pdf():
-    """Convert uploaded IPYNB file to PDF."""
+    """Convert uploaded IPYNB file to PDF using HTML export and WeasyPrint for speed."""
     try:
-        # Check if file is in request
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
 
         file = request.files['file']
-
-        # Check if file is selected
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-
-        # Check file extension
         if not allowed_file(file.filename):
             return jsonify({'error': 'Only .ipynb files are allowed'}), 400
 
-        # Read file content
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Convert to PDF
         try:
-            pdf_exporter = PDFExporter()
-            (pdf_output, _) = pdf_exporter.from_filename(file_path)
+            # Export notebook to HTML
+            html_exporter = HTMLExporter()
+            (body, resources) = html_exporter.from_filename(file_path)
+
+            # Convert HTML to PDF using WeasyPrint
+            pdf_io = io.BytesIO()
+            HTML(string=body).write_pdf(pdf_io)
+            pdf_io.seek(0)
+            pdf_name = filename.rsplit('.', 1)[0] + '.pdf'
 
             # Clean up temp file
             os.remove(file_path)
-
-            # Create response with PDF
-            pdf_io = io.BytesIO(pdf_output)
-            pdf_name = filename.rsplit('.', 1)[0] + '.pdf'
 
             return send_file(
                 pdf_io,
@@ -92,13 +89,10 @@ def convert_ipynb_to_pdf():
                 as_attachment=True,
                 download_name=pdf_name
             )
-
         except Exception as convert_error:
-            # Clean up temp file
             if os.path.exists(file_path):
                 os.remove(file_path)
             return jsonify({'error': f'Conversion failed: {str(convert_error)}'}), 500
-
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

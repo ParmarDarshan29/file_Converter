@@ -55,6 +55,19 @@ def serve_sitemap():
 @app.route('/api/convert', methods=['POST'])
 def convert_ipynb_to_pdf():
     """Convert uploaded IPYNB file to PDF using HTML export and WeasyPrint for speed."""
+    import json
+    from jsonschema import validate, ValidationError
+    # Minimal Jupyter notebook schema for validation
+    notebook_schema = {
+        "type": "object",
+        "properties": {
+            "cells": {"type": "array"},
+            "metadata": {"type": "object"},
+            "nbformat": {"type": "integer"},
+            "nbformat_minor": {"type": "integer"}
+        },
+        "required": ["cells", "metadata", "nbformat", "nbformat_minor"]
+    }
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
@@ -68,6 +81,18 @@ def convert_ipynb_to_pdf():
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
+
+        # Validate notebook structure before conversion
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                notebook_json = json.load(f)
+            validate(instance=notebook_json, schema=notebook_schema)
+        except ValidationError as ve:
+            os.remove(file_path)
+            return jsonify({'error': f'Invalid notebook structure: {ve.message}'}), 400
+        except Exception as ve:
+            os.remove(file_path)
+            return jsonify({'error': f'Invalid or corrupted notebook file: {str(ve)}'}), 400
 
         try:
             # Export notebook to HTML
@@ -92,9 +117,9 @@ def convert_ipynb_to_pdf():
         except Exception as convert_error:
             if os.path.exists(file_path):
                 os.remove(file_path)
-            return jsonify({'error': f'Conversion failed: {str(convert_error)}'}), 500
+            return jsonify({'error': f'Conversion failed: {str(convert_error)}. Please ensure your notebook is valid and try again.'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Unexpected server error: {str(e)}'}), 500
 
 
 @app.route('/api/health', methods=['GET'])
